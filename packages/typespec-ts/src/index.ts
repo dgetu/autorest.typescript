@@ -59,6 +59,7 @@ import {
   buildPagingTypes,
   buildPagingHelpers as buildModularPagingHelpers
 } from "./modular/buildPagingFiles.js";
+import { buildSerializerFunctions } from "./modular/serialize.js";
 
 export * from "./lib.js";
 
@@ -181,7 +182,10 @@ export async function $onEmit(context: EmitContext) {
 
       const isMultiClients = modularCodeModel.clients.length > 1;
       for (const subClient of modularCodeModel.clients) {
-        buildModels(modularCodeModel, subClient);
+        const modelResult = buildModels(modularCodeModel, subClient);
+        if (modelResult) {
+          buildSerializerFunctions(modularCodeModel, modelResult.modelMap);
+        }
         buildModelsOptions(modularCodeModel, subClient);
         const hasClientUnexpectedHelper =
           needUnexpectedHelper.get(subClient.rlcClientName) ?? false;
