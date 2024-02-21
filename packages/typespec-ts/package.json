@@ -80,7 +80,8 @@
     "@typespec/compiler": "0.52.0",
     "@typespec/http": "0.52.1",
     "@typespec/rest": "0.52.0",
-    "@typespec/versioning": "0.52.0"
+    "@typespec/versioning": "0.52.0",
+    "eslint-plugin-lodash-fp": "^2.2.0-a1"
   },
   "peerDependencies": {
     "@azure-tools/typespec-azure-core": ">=0.38.0 <1.0.0",

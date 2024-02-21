@@ -1,11 +1,12 @@
 {
   "parser": "@typescript-eslint/parser",
   "parserOptions": { "project": "./tsconfig.json" },
-  "plugins": ["@typescript-eslint", "require-extensions"],
+  "plugins": ["@typescript-eslint", "require-extensions", "lodash-fp"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "plugin:require-extensions/recommended"
+    "plugin:require-extensions/recommended",
+    "plugin:lodash-fp/recommended"
   ],
   "rules": {
     "@typescript-eslint/no-non-null-assertion": "off",
