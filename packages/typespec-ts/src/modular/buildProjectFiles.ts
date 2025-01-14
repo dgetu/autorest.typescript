@@ -17,10 +17,15 @@ function buildExportsForMultiClient(
     delete packageInfo.exports["./api"];
     for (const client of context.sdkPackage.clients) {
       const { subfolder } = getModularClientOptions(context, client);
-      packageInfo.exports[`./${subfolder}`] = `./src/${subfolder}/index.ts`;
+      packageInfo.exports[`./${subfolder}`] = path.join(
+        emitterOptions.modularOptions.sourceRoot,
+        `./${subfolder}/index.ts`
+      );
 
-      packageInfo.exports[`./${subfolder}/api`] =
-        `./src/${subfolder}/api/index.ts`;
+      packageInfo.exports[`./${subfolder}/api`] = path.join(
+        emitterOptions.modularOptions.sourceRoot,
+        `./${subfolder}/api/index.ts`
+      );
     }
   }
 
@@ -40,14 +45,20 @@ function buildExportsForMultiClient(
         )}`;
         packageInfo.exports[
           `./${subfolder ? subfolder + "/" : ""}${subApiPath}`
-        ] = `src/${subfolder ? subfolder + "/" : ""}${subApiPath}/index.ts`;
+        ] = path.join(
+          emitterOptions.modularOptions.sourceRoot,
+          `./${subfolder ? subfolder + "/" : ""}${subApiPath}/index.ts`
+        );
       }
     }
     delete packageInfo.exports["./models"];
     const modelSubpaths = getModelSubpaths(emitterOptions);
     for (const modelSubpath of modelSubpaths) {
       packageInfo.exports[`./${modelSubpath.replace("/index.ts", "")}`] =
-        `./src/${modelSubpath}`;
+        path.join(
+          emitterOptions.modularOptions.sourceRoot,
+          `./${modelSubpath}`
+        );
     }
   }
 
@@ -60,12 +71,18 @@ export function getModuleExports(
 ) {
   const exports: Record<string, any> = {
     exports: {
-      ".": "./src/index.ts",
-      "./models": "./src/models/index.ts"
+      ".": path.join(emitterOptions.modularOptions.sourceRoot, "./index.ts"),
+      "./models": path.join(
+        emitterOptions.modularOptions.sourceRoot,
+        "./models/index.ts"
+      )
     }
   };
   if (!emitterOptions.options.azureArm) {
-    exports["exports"]["./api"] = "./src/api/index.ts";
+    exports["exports"]["./api"] = path.join(
+      emitterOptions.modularOptions.sourceRoot,
+      "./api/index.ts"
+    );
   }
 
   return buildExportsForMultiClient(context, emitterOptions, exports);

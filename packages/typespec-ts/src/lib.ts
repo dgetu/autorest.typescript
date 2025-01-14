@@ -101,7 +101,8 @@ export const RLCOptionsSchema: JSONSchemaType<EmitterOptions> = {
       },
       required: [],
       nullable: true
-    }
+    },
+    "src-folder": { type: "string", nullable: true }
   },
   required: []
 };

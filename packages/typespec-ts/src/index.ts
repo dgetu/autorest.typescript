@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+import { lstat } from "fs/promises";
 import * as fsextra from "fs-extra";
 import {
   AzureCoreDependencies,
@@ -76,16 +77,16 @@ import {
 import { transformModularEmitterOptions } from "./modular/buildModularOptions.js";
 import { emitLoggerFile } from "./modular/emitLoggerFile.js";
 import { emitTypes } from "./modular/emitModels.js";
-import { existsSync } from "fs";
 import { getModuleExports } from "./modular/buildProjectFiles.js";
 import { getRLCClients } from "./utils/clientUtils.js";
-import { join } from "path";
+import * as path from "path";
 import { loadStaticHelpers } from "./framework/load-static-helpers.js";
 import { provideBinder } from "./framework/hooks/binder.js";
 import { provideSdkTypes } from "./framework/hooks/sdkTypes.js";
 import { transformRLCModel } from "./transform/transform.js";
 import { transformRLCOptions } from "./transform/transfromRLCOptions.js";
 import { emitSamples } from "./modular/emitSamples.js";
+import { isDefined } from "./modular/helpers/namingHelpers.js";
 
 export * from "./lib.js";
 
@@ -129,10 +130,10 @@ export async function $onEmit(context: EmitContext) {
   );
   const extraDependencies = isAzurePackage({ options: rlcOptions })
     ? {
-      ...AzurePollingDependencies,
-      ...AzureCoreDependencies,
-      ...AzureIdentityDependencies
-    }
+        ...AzurePollingDependencies,
+        ...AzureCoreDependencies,
+        ...AzureIdentityDependencies
+      }
     : { ...DefaultCoreDependencies };
   const binder = provideBinder(outputProject, {
     staticHelpers,
@@ -162,7 +163,7 @@ export async function $onEmit(context: EmitContext) {
 
   async function enrichDpgContext() {
     const generationPathDetail: GenerationDirDetail =
-      await calculateGenerationDir();
+      await calculateGenerationDir({ emitterOptions, context, existingDir });
     dpgContext.generationPathDetail = generationPathDetail;
     const options: RLCOptions = transformRLCOptions(emitterOptions, dpgContext);
     emitterOptions.isModularLibrary = options.isModularLibrary;
@@ -171,7 +172,7 @@ export async function $onEmit(context: EmitContext) {
       await fsextra.emptyDir(context.emitterOutputDir);
     }
     const hasTestFolder = await fsextra.pathExists(
-      join(dpgContext.generationPathDetail?.metadataDir ?? "", "test")
+      path.join(dpgContext.generationPathDetail?.metadataDir ?? "", "test")
     );
     options.generateTest =
       options.generateTest === true ||
@@ -181,14 +182,23 @@ export async function $onEmit(context: EmitContext) {
     dpgContext.rlcOptions = options;
   }
 
-  async function calculateGenerationDir(): Promise<GenerationDirDetail> {
+  async function calculateGenerationDir({
+    context,
+    emitterOptions,
+    existingDir
+  }: {
+    context: EmitContext;
+    emitterOptions: EmitterOptions;
+    existingDir: (path: string) => Promise<string | undefined>;
+  }): Promise<GenerationDirDetail> {
     const projectRoot = context.emitterOutputDir ?? "";
-    const customizationFolder = join(projectRoot, "generated");
-    const srcFolder = context.options["src-folder"] ?? "src";
-    // if customization folder exists, use it as sources root
-    const sourcesRoot = (await fsextra.pathExists(customizationFolder))
-      ? customizationFolder
-      : join(projectRoot, srcFolder);
+    const customizationRoot = await existingDir(
+      path.join(projectRoot, "generated")
+    );
+    const sourcesRoot = isDefined(emitterOptions["src-folder"])
+      ? path.join(projectRoot, emitterOptions["src-folder"])
+      : (customizationRoot ?? path.join(projectRoot, "src"));
+
     return {
       rootDir: projectRoot,
       metadataDir: projectRoot,
@@ -200,8 +210,8 @@ export async function $onEmit(context: EmitContext) {
   async function clearSrcFolder() {
     await fsextra.emptyDir(
       dpgContext.generationPathDetail?.modularSourcesDir ??
-      dpgContext.generationPathDetail?.rlcSourcesDir ??
-      ""
+        dpgContext.generationPathDetail?.rlcSourcesDir ??
+        ""
     );
   }
 
@@ -243,7 +253,7 @@ export async function $onEmit(context: EmitContext) {
 
   async function generateModularSources() {
     const modularSourcesRoot =
-      dpgContext.generationPathDetail?.modularSourcesDir ?? context.options["src-folder"] ?? "src";
+      dpgContext.generationPathDetail?.modularSourcesDir ?? "src";
     const project = useContext("outputProject");
     modularEmitterOptions = transformModularEmitterOptions(
       dpgContext,
@@ -362,11 +372,11 @@ export async function $onEmit(context: EmitContext) {
     const option = dpgContext.rlcOptions!;
     const isAzureFlavor = isAzurePackage({ options: option });
     // Generate metadata
-    const existingPackageFilePath = join(
+    const existingPackageFilePath = path.join(
       dpgContext.generationPathDetail?.metadataDir ?? "",
       "package.json"
     );
-    const hasPackageFile = await existsSync(existingPackageFilePath);
+    const hasPackageFile = await fsextra.pathExists(existingPackageFilePath);
     const shouldGenerateMetadata =
       option.generateMetadata === true ||
       (option.generateMetadata === undefined && !hasPackageFile);
@@ -445,12 +455,15 @@ export async function $onEmit(context: EmitContext) {
       );
     }
   }
-
-  function getRelativeContextPaths(codeModel: ModularCodeModel) {
-    const srcFolder = context.options["src-folder"] ?? "src";
-    return codeModel.clients
-      .map((subClient) => getClientContextPath(subClient, codeModel))
-      .map((path) => path.substring(path.indexOf(srcFolder)));
+  function getRelativeContextPaths(
+    context: SdkContext,
+    options: ModularEmitterOptions
+  ) {
+    const srcFolder = options.options["src-folder"] ?? "src";
+    return context.sdkPackage.clients.map((subClient) => {
+      const path = getClientContextPath(context, subClient, options);
+      return path.substring(path.lastIndexOf(srcFolder));
+    });
   }
 }
 
@@ -525,5 +538,20 @@ export async function renameClientName(
     emitterOptions.options.typespecTitleMap[client.name]
   ) {
     client.name = emitterOptions.options.typespecTitleMap[client.name]!;
+  }
+}
+
+async function existingDir(path: string): Promise<string | undefined> {
+  try {
+    const status = await lstat(path);
+    return status.isDirectory() ? path : undefined;
+  } catch (e: any) {
+    const isExpectedError =
+      e?.code === "ENOENT" && e?.syscall === "lstat" && e?.path === path;
+    if (!isExpectedError) {
+      throw e;
+    }
+    // fs entry is missing
+    return undefined;
   }
 }

@@ -252,6 +252,7 @@ export interface RLCOptions {
   ignorePropertyNameNormalize?: boolean;
   compatibilityQueryMultiFormat?: boolean;
   typespecTitleMap?: Record<string, string>;
+  "src-folder"?: string;
 }
 
 export interface ServiceInfo {
