@@ -1,7 +1,7 @@
 emit: ["@azure-tools/typespec-ts"]
 options:
   "@azure-tools/typespec-ts":
-    typespecTitleMap: 
+    typespecTitleMap:
       NetworkAnalyticsClient: NetworkAnalyticsApi
     examples-directory: "{project-root}/spec/examples"
     generateMetadata: true

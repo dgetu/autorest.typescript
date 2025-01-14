@@ -11,3 +11,4 @@ options:
       name: "@msinternal/eventgrid"
       description: "Azure EventGrid"
       version: "1.0.0-beta.1"
+    src-folder: src/generated

@@ -17,3 +17,4 @@ options:
       name: "@azure/load-testing"
       description: This package contains Microsoft Azure LoadTestingClient client library.
       version: 1.0.1
+    src-folder: src/generated

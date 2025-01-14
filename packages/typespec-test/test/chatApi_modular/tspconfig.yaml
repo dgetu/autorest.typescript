@@ -8,3 +8,4 @@ options:
     hierarchyClient: false
     packageDetails:
       name: "@azure/ai-chat-protocol"
+    src-folder: src/generated

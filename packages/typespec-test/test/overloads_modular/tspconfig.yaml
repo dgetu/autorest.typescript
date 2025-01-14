@@ -8,3 +8,4 @@ options:
     packageDetails:
       name: "@msinternal/overload_modular"
       description: "Mock Service"
+    src-folder: src/generated

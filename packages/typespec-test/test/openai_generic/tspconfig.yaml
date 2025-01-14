@@ -8,3 +8,4 @@ options:
     packageDetails:
       name: "@msinternal/openai-generic"
       description: "OpenAI"
+    src-folder: src/generated

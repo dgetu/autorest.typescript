@@ -8,3 +8,4 @@ options:
     packageDetails:
       name: "@msinternal/hierarchy-generic"
       description: "OpenAI"
+    src-folder: src/generated
